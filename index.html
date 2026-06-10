@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎲 Gioco dell'Oca — Iperammortamento</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<!-- GSAP + plugins -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/MotionPathPlugin.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green:#22c55e;--green-bg:#dcfce7;--green-dark:#15803d;
+  --red:#ef4444;  --red-bg:#fee2e2;  --red-dark:#991b1b;
+  --amber:#f59e0b;--amber-bg:#fef3c7;--amber-dark:#92400e;
+  --blue:#3b82f6; --blue-bg:#dbeafe; --blue-dark:#1e3a8a;
+  --purple:#a855f7;--purple-bg:#f3e8ff;--purple-dark:#581c87;
+  --gold:#fbbf24; --gold-bg:#fef9c3; --gold-dark:#b45309;
+  --p1:#3b82f6;--p2:#ef4444;
+  --F:'Nunito',sans-serif;--FT:'Fredoka One',cursive;
+}
+
+html,body{height:100%;font-family:var(--F);background:#120630;color:#1e293b;overflow-x:hidden}
+
+/* starfield */
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse at 20% 10%,#3b006688 0%,transparent 40%),
+    radial-gradient(ellipse at 80% 85%,#0c2a6e88 0%,transparent 40%),
+    radial-gradient(1.5px 1.5px at 8% 12%,#fff,transparent),
+    radial-gradient(1px 1px at 22% 7%,#fff,transparent),
+    radial-gradient(1px 1px at 38% 18%,rgba(255,255,255,.6),transparent),
+    radial-gradient(2px 2px at 55% 4%,rgba(255,255,255,.8),transparent),
+    radial-gradient(1px 1px at 71% 14%,rgba(255,255,255,.5),transparent),
+    radial-gradient(1.5px 1.5px at 88% 9%,#fff,transparent),
+    radial-gradient(1px 1px at 15% 35%,rgba(255,255,255,.4),transparent),
+    radial-gradient(1px 1px at 42% 42%,rgba(255,255,255,.3),transparent),
+    radial-gradient(1px 1px at 78% 38%,rgba(255,255,255,.5),transparent),
+    radial-gradient(1.5px 1.5px at 92% 55%,rgba(255,255,255,.6),transparent),
+    radial-gradient(1px 1px at 5% 68%,rgba(255,255,255,.4),transparent),
+    radial-gradient(1px 1px at 35% 72%,rgba(255,255,255,.3),transparent),
+    radial-gradient(1px 1px at 62% 80%,rgba(255,255,255,.5),transparent),
+    radial-gradient(1px 1px at 88% 76%,rgba(255,255,255,.4),transparent);}
+
+/* ── screens ── */
+.screen{display:none;position:relative;z-index:1;min-height:100vh}
+.screen.active{display:flex;flex-direction:column}
+
+/* ════════════════════ START SCREEN ════════════════════ */
+#scr-start{align-items:center;justify-content:center;padding:24px;text-align:center;gap:0}
+
+.s-title{
+  font-family:var(--FT);font-size:clamp(30px,6vw,68px);color:#fff;line-height:1.1;
+  text-shadow:0 0 40px rgba(168,85,247,.9),0 4px 0 rgba(0,0,0,.5);
+  margin-bottom:10px;opacity:0;transform:translateY(30px) scale(.9);
+}
+.s-sub{
+  font-size:clamp(13px,1.8vw,16px);color:rgba(255,255,255,.65);
+  max-width:500px;line-height:1.7;margin-bottom:52px;opacity:0;
+}
+.mode-row{display:flex;gap:24px;flex-wrap:wrap;justify-content:center;opacity:0}
+.mode-card{
+  background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.14);
+  border-radius:24px;padding:36px 40px;cursor:pointer;width:210px;
+  backdrop-filter:blur(12px);
+  transition:box-shadow .2s;
+}
+.mode-card:hover{
+  box-shadow:0 20px 60px rgba(0,0,0,.5),0 0 40px rgba(168,85,247,.45);
+}
+.mc-icon{font-size:54px;display:block;margin-bottom:14px}
+.mc-label{font-family:var(--FT);font-size:24px;color:#fff;display:block;margin-bottom:6px}
+.mc-desc{font-size:12px;color:rgba(255,255,255,.55);line-height:1.5}
+.deco-dice{font-size:44px;margin-top:50px;opacity:.35;display:block}
+
+/* ════════════════════ GAME SCREEN ════════════════════ */
+#scr-game{padding:14px 12px 48px;display:none}
+#scr-game.active{display:block}
+
+.g-header{text-align:center;margin-bottom:16px}
+.g-header h1{font-family:var(--FT);font-size:clamp(20px,3.5vw,38px);color:#fff;
+  text-shadow:0 0 20px rgba(168,85,247,.7),0 3px 0 rgba(0,0,0,.4);line-height:1.1}
+.g-header h1 em{color:var(--gold);font-style:normal}
+.g-header p{font-size:12px;color:rgba(255,255,255,.5);margin-top:4px}
+
+.back-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 14px;border-radius:10px;border:none;
+  background:rgba(255,255,255,.1);color:#fff;
+  font-family:var(--F);font-size:12px;font-weight:700;cursor:pointer;
+  margin-bottom:14px;backdrop-filter:blur(8px);
+  transition:background .2s;
+}
+.back-btn:hover{background:rgba(255,255,255,.2)}
+
+/* layout */
+.g-layout{display:grid;grid-template-columns:1fr 295px;gap:16px;max-width:1080px;margin:0 auto;align-items:start}
+@media(max-width:770px){.g-layout{grid-template-columns:1fr}}
+
+/* ════════════ BOARD ════════════ */
+#board-wrap{
+  background:linear-gradient(145deg,#1e0860,#2d0f8a,#180550);
+  border:3px solid rgba(168,85,247,.35);border-radius:20px;
+  padding:12px;
+  box-shadow:0 8px 40px rgba(0,0,0,.6),0 0 80px rgba(100,0,220,.15),
+             inset 0 1px 0 rgba(255,255,255,.08);
+  position:relative;
+}
+.board-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+
+/* direction arrows overlay — drawn by JS on a canvas */
+#arrow-canvas{position:absolute;inset:0;pointer-events:none;border-radius:20px}
+
+/* ════════════ CELLS ════════════ */
+.cell{
+  aspect-ratio:1;border-radius:10px;border:2px solid #94a3b8;
+  background:#f8fafc;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:3px 2px;position:relative;cursor:pointer;
+  overflow:hidden;
+  transition:filter .15s;
+}
+.cell::after{
+  content:'';position:absolute;inset:0;border-radius:8px;
+  background:linear-gradient(140deg,rgba(255,255,255,.35) 0%,transparent 55%);
+  pointer-events:none;
+}
+.cell:hover{filter:brightness(1.08);z-index:5}
+
+.cell.t-avanti  {background:var(--green-bg);border-color:var(--green)}
+.cell.t-indietro{background:var(--red-bg);border-color:var(--red)}
+.cell.t-stop    {background:var(--amber-bg);border-color:var(--amber)}
+.cell.t-start   {background:var(--blue-bg);border-color:var(--blue)}
+.cell.t-end     {background:var(--purple-bg);border-color:var(--purple)}
+.cell.t-oca     {background:var(--gold-bg);border-color:var(--gold)}
+.cell.t-neutral {background:#f1f5f9;border-color:#cbd5e1}
+
+.cell.hi-p1{box-shadow:0 0 0 3px var(--p1),0 0 16px rgba(59,130,246,.55);z-index:10}
+.cell.hi-p2{box-shadow:0 0 0 3px var(--p2),0 0 16px rgba(239,68,68,.55);z-index:10}
+.cell.hi-both{box-shadow:0 0 0 3px var(--gold),0 0 18px rgba(251,191,36,.6);z-index:12}
+
+.c-num{position:absolute;top:3px;left:4px;font-size:7px;font-weight:900;
+  color:rgba(0,0,0,.28);line-height:1;font-family:var(--F)}
+.c-icon{font-size:17px;line-height:1;margin-bottom:1px}
+.c-lbl{font-size:5.8px;text-align:center;line-height:1.2;font-weight:800;
+  max-width:96%;word-break:break-word;hyphens:auto}
+
+.cell.t-avanti   .c-lbl{color:var(--green-dark)}
+.cell.t-indietro .c-lbl{color:var(--red-dark)}
+.cell.t-stop     .c-lbl{color:var(--amber-dark)}
+.cell.t-start    .c-lbl{color:var(--blue-dark)}
+.cell.t-end      .c-lbl{color:var(--purple-dark)}
+.cell.t-oca      .c-lbl{color:var(--gold-dark)}
+.cell.t-neutral  .c-lbl{color:#475569}
+
+/* oca pulse */
+.cell.t-oca{animation:ocaPulse 2s ease infinite}
+@keyframes ocaPulse{0%,100%{box-shadow:0 0 0 0 rgba(251,191,36,.2)}
+  50%{box-shadow:0 0 10px 3px rgba(251,191,36,.45)}}
+
+/* direction arrow in cell */
+.c-arrow{
+  position:absolute;bottom:2px;left:50%;transform:translateX(-50%);
+  font-size:8px;line-height:1;opacity:.7;pointer-events:none;
+}
+
+/* pawns container — absolutely placed by JS */
+#pawns-layer{position:absolute;inset:12px;pointer-events:none;z-index:30}
+.pawn-el{
+  position:absolute;font-size:22px;
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,.6));
+  transform-origin:center bottom;
+  line-height:1;
+}
+
+.c-empty{aspect-ratio:1;border-radius:10px;background:rgba(255,255,255,.02);
+  border:1px dashed rgba(255,255,255,.06)}
+
+/* ════════════ SIDEBAR ════════════ */
+.sidebar{display:flex;flex-direction:column;gap:12px}
+.panel{background:#fff;border-radius:16px;padding:14px;
+  box-shadow:0 4px 24px rgba(0,0,0,.28)}
+.ptitle{font-family:var(--FT);font-size:15px;color:#1e293b;
+  margin-bottom:10px;padding-bottom:8px;border-bottom:2px dashed #e2e8f0}
+
+/* players */
+.pg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pcard{border-radius:12px;border:2.5px solid transparent;padding:10px 8px;
+  text-align:center;transition:all .25s}
+.pcard.c1{background:linear-gradient(135deg,#dbeafe,#bfdbfe);border-color:#93c5fd}
+.pcard.c2{background:linear-gradient(135deg,#fee2e2,#fecaca);border-color:#fca5a5}
+.pcard.active.c1{border-color:var(--p1);box-shadow:0 0 0 3px rgba(59,130,246,.2),0 4px 12px rgba(59,130,246,.18);transform:scale(1.03)}
+.pcard.active.c2{border-color:var(--p2);box-shadow:0 0 0 3px rgba(239,68,68,.2),0 4px 12px rgba(239,68,68,.18);transform:scale(1.03)}
+.pcard.skip-fade{opacity:.55}
+.pc-pw{font-size:26px;display:block;margin-bottom:3px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.2))}
+.pc-nm{font-size:10px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+.pc-pos{font-family:var(--FT);font-size:22px;color:#1e293b;line-height:1}
+.pc-lbl{font-size:9px;color:#64748b}
+.pc-skip{display:inline-block;margin-top:4px;background:var(--amber-bg);color:var(--amber-dark);
+  border:1px solid var(--amber);border-radius:20px;font-size:9px;font-weight:700;padding:2px 7px}
+.prog-wrap{background:#e2e8f0;border-radius:99px;height:5px;overflow:hidden;margin-top:6px}
+.prog-bar{height:5px;border-radius:99px;transition:width .5s cubic-bezier(.34,1.56,.64,1)}
+.pb1{background:linear-gradient(90deg,#3b82f6,#818cf8)}
+.pb2{background:linear-gradient(90deg,#ef4444,#f97316)}
+
+.turn-banner{
+  text-align:center;font-size:13px;font-weight:800;margin-top:8px;
+  padding:8px;border-radius:10px;
+  background:linear-gradient(135deg,#f0f9ff,#e0f2fe);
+  color:#0c4a6e;border:1px solid #bae6fd;transition:all .3s;
+}
+
+/* dice */
+.dice-area{display:flex;gap:10px;align-items:center;margin-bottom:12px;justify-content:center}
+.die-wrap{perspective:200px}
+.die{
+  width:58px;height:58px;border-radius:13px;
+  background:linear-gradient(145deg,#ffffff,#f0ede8);
+  border:2px solid #d4c8a0;
+  display:flex;align-items:center;justify-content:center;font-size:32px;
+  box-shadow:inset 0 2px 5px rgba(255,255,255,.9),inset 0 -2px 4px rgba(0,0,0,.1),
+             0 4px 12px rgba(0,0,0,.22),0 2px 4px rgba(0,0,0,.14);
+  cursor:default;user-select:none;
+}
+.dtotal{flex:1;text-align:center;font-family:var(--FT);font-size:32px;color:#1e293b;line-height:1}
+.dtotal small{font-size:10px;display:block;color:#64748b;font-family:var(--F);font-weight:600;margin-top:2px}
+
+#roll-btn{
+  width:100%;padding:13px;border-radius:14px;border:none;
+  background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;
+  font-family:var(--FT);font-size:19px;cursor:pointer;
+  box-shadow:0 4px 18px rgba(124,58,237,.45),0 2px 4px rgba(0,0,0,.2);
+  position:relative;overflow:hidden;transition:transform .12s;
+}
+#roll-btn::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,.22) 0%,transparent 55%);
+  border-radius:14px;pointer-events:none}
+#roll-btn:hover:not(:disabled){transform:translateY(-2px);
+  box-shadow:0 8px 28px rgba(124,58,237,.5),0 4px 8px rgba(0,0,0,.2)}
+#roll-btn:active:not(:disabled){transform:scale(.97)}
+#roll-btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important;box-shadow:none}
+
+/* event panel */
+.ev-badge{display:inline-block;font-size:10px;font-weight:800;padding:3px 10px;
+  border-radius:20px;margin-bottom:7px;text-transform:uppercase;letter-spacing:.7px}
+.eb-avanti  {background:var(--green-bg);color:var(--green-dark);border:1.5px solid var(--green)}
+.eb-indietro{background:var(--red-bg);color:var(--red-dark);border:1.5px solid var(--red)}
+.eb-stop    {background:var(--amber-bg);color:var(--amber-dark);border:1.5px solid var(--amber)}
+.eb-neutro  {background:#f1f5f9;color:#475569;border:1.5px solid #94a3b8}
+.eb-oca     {background:var(--gold-bg);color:var(--gold-dark);border:1.5px solid var(--gold)}
+.eb-start   {background:var(--blue-bg);color:var(--blue-dark);border:1.5px solid var(--blue)}
+.eb-end     {background:var(--purple-bg);color:var(--purple-dark);border:1.5px solid var(--purple)}
+
+#ev-icon{font-size:34px;text-align:center;display:block;margin-bottom:6px}
+#ev-ptag{font-size:10px;font-weight:800;color:#7c3aed;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+#ev-title{font-family:var(--FT);font-size:13.5px;color:#1e293b;margin-bottom:5px;line-height:1.3}
+#ev-desc{font-size:11.5px;color:#475569;line-height:1.6}
+#ev-effect{margin-top:8px;font-size:11px;font-weight:800;color:#7c3aed;
+  background:#f3e8ff;padding:5px 9px;border-radius:8px;display:none}
+
+/* legend */
+.legend{display:flex;flex-direction:column;gap:5px}
+.li{display:flex;align-items:flex-start;gap:7px;font-size:11px;color:#374151;line-height:1.4}
+.ld{width:12px;height:12px;border-radius:3px;flex-shrink:0;margin-top:1px;border:1.5px solid rgba(0,0,0,.1)}
+
+/* ════════ EVENT MODAL (bonus/malus confirm) ════════ */
+#ev-modal{
+  display:none;position:fixed;inset:0;z-index:400;
+  align-items:center;justify-content:center;
+  background:rgba(10,0,35,.65);backdrop-filter:blur(6px);
+}
+#ev-modal.open{display:flex}
+#ev-modal-box{
+  background:#fff;border-radius:24px;padding:36px 40px;
+  text-align:center;max-width:380px;width:90%;
+  box-shadow:0 30px 80px rgba(0,0,0,.5);
+  transform:scale(.7);opacity:0; /* animated in by GSAP */
+}
+.em-icon{font-size:56px;display:block;margin-bottom:10px}
+.em-badge{display:inline-block;font-size:11px;font-weight:800;padding:4px 14px;
+  border-radius:20px;margin-bottom:10px;text-transform:uppercase;letter-spacing:.7px}
+.em-title{font-family:var(--FT);font-size:20px;color:#1e293b;margin-bottom:8px;line-height:1.2}
+.em-desc{font-size:13px;color:#475569;line-height:1.65;margin-bottom:14px}
+.em-effect{
+  font-family:var(--FT);font-size:28px;margin-bottom:20px;display:block;
+  padding:10px 20px;border-radius:14px;
+}
+.em-effect.pos{background:var(--green-bg);color:var(--green-dark)}
+.em-effect.neg{background:var(--red-bg);color:var(--red-dark)}
+.em-effect.stp{background:var(--amber-bg);color:var(--amber-dark)}
+.em-effect.oca{background:var(--gold-bg);color:var(--gold-dark)}
+
+#em-ok-btn{
+  padding:13px 40px;border-radius:14px;border:none;
+  background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;
+  font-family:var(--FT);font-size:20px;cursor:pointer;
+  box-shadow:0 4px 18px rgba(124,58,237,.45);transition:transform .12s;
+}
+#em-ok-btn:hover{transform:translateY(-2px)}
+#em-ok-btn:active{transform:scale(.96)}
+
+/* ════════ WIN OVERLAY ════════ */
+#win-ov{
+  display:none;position:fixed;inset:0;z-index:300;
+  align-items:center;justify-content:center;
+  background:rgba(5,0,25,.7);backdrop-filter:blur(8px);
+}
+#win-ov.open{display:flex}
+#win-box{
+  background:#fff;border-radius:28px;padding:42px 48px;
+  text-align:center;max-width:420px;width:90%;
+  box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 0 3px rgba(168,85,247,.3);
+  transform:scale(.5) rotate(-5deg);opacity:0;
+}
+.wt{font-size:72px;display:block;margin-bottom:12px}
+#win-title{font-family:var(--FT);font-size:28px;color:#1e293b;margin-bottom:8px}
+#win-desc{font-size:13px;color:#475569;line-height:1.7;margin-bottom:8px}
+#win-sub{font-size:12px;color:#94a3b8;font-weight:700;margin-bottom:22px;display:block}
+#win-btn{
+  padding:13px 32px;border-radius:14px;border:none;
+  background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;
+  font-family:var(--FT);font-size:18px;cursor:pointer;
+  box-shadow:0 4px 18px rgba(124,58,237,.4);transition:transform .12s;
+}
+#win-btn:hover{transform:translateY(-2px)}
+
+/* confetti */
+.cft{position:fixed;top:-12px;pointer-events:none;z-index:350;border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ START SCREEN ══════════════ -->
+<div id="scr-start" class="screen active">
+  <h1 class="s-title">🎲 Gioco dell'Oca<br>dell'Iperammortamento</h1>
+  <p class="s-sub">Webinar MIMIT, riscritture del decreto, interventi del Quirinale…<br>Chi pubblica per primo il Decreto Attuativo in Gazzetta Ufficiale?</p>
+  <div class="mode-row">
+    <div class="mode-card" id="mc1" onclick="startGame(1)">
+      <span class="mc-icon">🐦</span>
+      <span class="mc-label">1 Giocatore</span>
+      <span class="mc-desc">Sfida la burocrazia da solo. Quanti lanci ti servono?</span>
+    </div>
+    <div class="mode-card" id="mc2" onclick="startGame(2)">
+      <span class="mc-icon">🐦🦜</span>
+      <span class="mc-label">2 Giocatori</span>
+      <span class="mc-desc">A turno sulla stessa tastiera. Chi ce la fa prima?</span>
+    </div>
+  </div>
+  <span class="deco-dice">🎲</span>
+</div>
+
+<!-- ══════════════ GAME SCREEN ══════════════ -->
+<div id="scr-game" class="screen">
+  <div style="max-width:1080px;margin:0 auto;padding:0 4px">
+    <button class="back-btn" onclick="goHome()">← Menu principale</button>
+  </div>
+  <div class="g-header">
+    <h1>🎲 Gioco dell'Oca — <em>Iperammortamento</em></h1>
+    <p>36 caselle di burocrazia pura · Traguardo: Decreto Attuativo in GU!</p>
+  </div>
+
+  <div class="g-layout">
+    <!-- BOARD -->
+    <div id="board-wrap">
+      <div class="board-grid" id="grid"></div>
+      <canvas id="arrow-canvas"></canvas>
+      <div id="pawns-layer"></div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+
+      <div class="panel">
+        <div class="ptitle">👥 Giocatori</div>
+        <div class="pg" id="pg">
+          <div class="pcard c1" id="card0">
+            <span class="pc-pw">🐦</span>
+            <div class="pc-nm">Giocatore 1</div>
+            <div class="pc-pos" id="pp0">0</div>
+            <div class="pc-lbl">casella</div>
+            <div class="prog-wrap"><div class="prog-bar pb1" id="pb0" style="width:0%"></div></div>
+          </div>
+          <div class="pcard c2" id="card1">
+            <span class="pc-pw">🦜</span>
+            <div class="pc-nm">Giocatore 2</div>
+            <div class="pc-pos" id="pp1">0</div>
+            <div class="pc-lbl">casella</div>
+            <div class="prog-wrap"><div class="prog-bar pb2" id="pb1" style="width:0%"></div></div>
+          </div>
+        </div>
+        <div class="turn-banner" id="turn-banner">Turno: 🐦 Giocatore 1</div>
+      </div>
+
+      <div class="panel">
+        <div class="ptitle">🎲 Dadi</div>
+        <div class="dice-area">
+          <div class="die-wrap"><div class="die" id="die0">⚀</div></div>
+          <div class="die-wrap"><div class="die" id="die1">⚀</div></div>
+          <div class="dtotal" id="dtotal">—<small>totale</small></div>
+        </div>
+        <button id="roll-btn" onclick="rollDice()">🎲 Lancia!</button>
+      </div>
+
+      <div class="panel">
+        <div class="ptitle">📰 Notizie dal Ministero</div>
+        <span id="ev-icon">🏁</span>
+        <div id="ev-ptag"></div>
+        <div id="ev-badge-wrap"><span class="ev-badge eb-start">Partenza</span></div>
+        <div id="ev-title">Pronti a giocare!</div>
+        <div id="ev-desc">Lancia i dadi per iniziare il percorso verso il decreto attuativo.</div>
+        <div id="ev-effect"></div>
+      </div>
+
+      <div class="panel">
+        <div class="ptitle">📖 Legenda</div>
+        <div class="legend">
+          <div class="li"><div class="ld" style="background:var(--green-bg);border-color:var(--green)"></div><b>Avanza</b> — notizie positive 🎉</div>
+          <div class="li"><div class="ld" style="background:var(--red-bg);border-color:var(--red)"></div><b>Torna indietro</b> — rinvii 😱</div>
+          <div class="li"><div class="ld" style="background:var(--amber-bg);border-color:var(--amber)"></div><b>Salta turno</b> — attesa ⏸</div>
+          <div class="li"><div class="ld" style="background:var(--gold-bg);border-color:var(--gold)"></div><b>Oca 🦢</b> — vola avanti!</div>
+          <div class="li"><div class="ld" style="background:var(--purple-bg);border-color:var(--purple)"></div><b>Arrivo</b> — Decreto in GU 🏆</div>
+          <div class="li" style="margin-top:4px">🐦 G1 &nbsp;·&nbsp; 🦜 G2 &nbsp;·&nbsp; ➡ direzione percorso</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ EVENT MODAL ══════ -->
+<div id="ev-modal">
+  <div id="ev-modal-box">
+    <span class="em-icon" id="em-icon">📣</span>
+    <div id="em-badge-wrap"></div>
+    <div class="em-title" id="em-title"></div>
+    <div class="em-desc" id="em-desc"></div>
+    <span class="em-effect" id="em-effect"></span>
+    <button id="em-ok-btn" onclick="confirmEvent()">OK, avanti! 🚀</button>
+  </div>
+</div>
+
+<!-- ══════ WIN OVERLAY ══════ -->
+<div id="win-ov">
+  <div id="win-box">
+    <span class="wt">🏆</span>
+    <div id="win-title"></div>
+    <p id="win-desc"></p>
+    <span id="win-sub"></span>
+    <br><br>
+    <button id="win-btn" onclick="resetGame()">↩ Nuova partita</button>
+  </div>
+</div>
+
+<script>
+gsap.registerPlugin(MotionPathPlugin);
+
+/* ═══════════════════════════════════════
+   CELLS DATA
+═══════════════════════════════════════ */
+const DF=['⚀','⚁','⚂','⚃','⚄','⚅'];
+
+const CELLS=[
+  {n:0,  icon:'🏁', lbl:'Partenza',        type:'start',   eff:0,
+   title:'Il percorso comincia!',
+   desc:'Sei un\'impresa manifatturiera con un piano di investimento in beni 4.0. Il governo ha annunciato la proroga dell\'iperammortamento. Comincia la corsa al decreto attuativo!'},
+  {n:1,  icon:'📣', lbl:'Annuncio MEF',     type:'neutral', eff:0,
+   title:'Il MEF annuncia lo studio della misura',
+   desc:'Il Ministero dell\'Economia comunica che è in corso un\'analisi degli effetti dell\'iperammortamento. Si attende.'},
+  {n:2,  icon:'🎓', lbl:'Webinar MIMIT',    type:'avanti',  eff:2,
+   title:'MIMIT: "Il decreto è in dirittura d\'arrivo"',
+   desc:'Il Ministero delle Imprese organizza un webinar e annuncia che il decreto sarà pubblicato "nelle prossime settimane". Entusiasmo alle stelle!'},
+  {n:3,  icon:'📋', lbl:'Tavolo tecnico',   type:'neutral', eff:0,
+   title:'Tavolo tecnico MEF-MIMIT insediato',
+   desc:'Si insedia il tavolo tecnico congiunto. I funzionari ordinano caffè e aprono il documento condiviso per la prima volta.'},
+  {n:4,  icon:'💻', lbl:'Richiesta software',type:'indietro',eff:-3,
+   title:'Palazzo Chigi: "Ammettete anche il software!"',
+   desc:'La Presidenza del Consiglio chiede che vengano ammessi i software gestionali tra i beni agevolabili. Il decreto si riscrive da zero!'},
+  {n:5,  icon:'✅', lbl:'MEF approva',       type:'avanti',  eff:3,
+   title:'MEF approva la bozza del decreto',
+   desc:'Il MEF firma il via libera tecnico alla bozza e la trasmette al Consiglio di Stato. Grande passo avanti!'},
+  {n:6,  icon:'🦢', lbl:'Oca!',              type:'oca',     eff:4,
+   title:'OCA! Il decreto piace a tutti!',
+   desc:'Confindustria, CNA e Confapi esprimono parere unanimemente favorevole alla bozza. Evento rarissimo: vola avanti!'},
+  {n:7,  icon:'🏛️', lbl:'Consiglio di Stato',type:'neutral', eff:0,
+   title:'Consiglio di Stato: osservazioni tecniche',
+   desc:'Parere favorevole ma con osservazioni su tre articoli. Gli uffici ministeriali aprono Word e rileggono tutto da capo.'},
+  {n:8,  icon:'⏸️', lbl:'Commissione ferma', type:'stop',    eff:0,
+   title:'Commissione parlamentare in stallo!',
+   desc:'La Commissione Attività Produttive non trova accordo sul perimetro dei beni ammissibili. Riunione sospesa a data da definire.'},
+  {n:9,  icon:'🖊️', lbl:'ADE: riscrivere!',  type:'indietro',eff:-2,
+   title:'Agenzia Entrate chiede riscrittura art. 3',
+   desc:'L\'ADE rileva una discrasia sulla cumulabilità con altri incentivi. Il testo dell\'articolo 3 va interamente riscritto.'},
+  {n:10, icon:'📊', lbl:'Ragioneria ok',      type:'avanti',  eff:1,
+   title:'Ragioneria approva la relazione tecnica',
+   desc:'La Ragioneria Generale certifica la copertura finanziaria della misura. Nessuna obiezione sui fondi!'},
+  {n:11, icon:'🤝', lbl:'Accordo MEF-MIMIT', type:'neutral', eff:0,
+   title:'MEF e MIMIT trovano accordo sui massimali',
+   desc:'Dopo settimane di riunioni estenuanti, i due ministeri concordano finalmente su aliquota e massimali di investimento.'},
+  {n:12, icon:'📡', lbl:'Webinar MIMIT 2',   type:'avanti',  eff:2,
+   title:'Secondo webinar MIMIT: "firma imminente"',
+   desc:'Il Direttore Generale annuncia: "uscita entro 30 giorni". La slide è proiettata in diretta streaming. Le imprese esultano!'},
+  {n:13, icon:'🔄', lbl:'Quirinale interviene',type:'indietro',eff:-2,
+   title:'Il Quirinale chiede più tutele per le PMI',
+   desc:'La Presidenza della Repubblica suggerisce una corsia preferenziale per le PMI. Il decreto torna agli uffici per rielaborazione.'},
+  {n:14, icon:'⏳', lbl:'Iter Ragioneria bis',type:'stop',    eff:0,
+   title:'Nuova verifica alla Ragioneria dello Stato',
+   desc:'Le modifiche impongono una nuova relazione tecnica. I tempi tecnici sono di 45 giorni. Nulla da fare: si aspetta.'},
+  {n:15, icon:'📰', lbl:'Bozza leaked!',      type:'avanti',  eff:2,
+   title:'Il Sole 24 Ore pubblica la bozza trapelata',
+   desc:'Una bozza ufficiosa circola. Le imprese iniziano a pianificare gli investimenti. Il governo non smentisce il contenuto.'},
+  {n:16, icon:'🦢', lbl:'Oca!',              type:'oca',     eff:4,
+   title:'OCA! Interpello favorevole dell\'Agenzia Entrate',
+   desc:'L\'ADE risponde a un interpello in senso favorevole, chiarendo l\'ambito applicativo del futuro decreto. Clima ottimistissimo!'},
+  {n:17, icon:'🧾', lbl:'Legge di Bilancio', type:'neutral', eff:0,
+   title:'Legge di Bilancio rifinanzia la misura',
+   desc:'La Legge di Bilancio stanzia i fondi per l\'iperammortamento. La norma primaria c\'è. Ora manca solo il decreto attuativo.'},
+  {n:18, icon:'🔁', lbl:'Software esclusi!', type:'indietro',eff:-4,
+   title:'MEF esclude il software: si riscrive tutto',
+   desc:'Il MEF ribalta la posizione di Palazzo Chigi: software gestionali fuori dal perimetro. Il decreto va riscritto da capo. Enorme passo indietro!'},
+  {n:19, icon:'📬', lbl:'Circolare ADE',     type:'neutral', eff:0,
+   title:'Circolare ADE 12/E: chiarimenti preventivi',
+   desc:'L\'ADE pubblica chiarimenti preventivi in attesa del decreto. Utile, ma non è ancora il decreto definitivo.'},
+  {n:20, icon:'🏗️', lbl:'Conferenza MIMIT', type:'avanti',  eff:2,
+   title:'Ministro MIMIT: "decreto entro fine trimestre"',
+   desc:'Conferenza stampa ufficiale. Il Ministro si espone pubblicamente con una data. Dichiarazione che diventa vincolante moralmente!'},
+  {n:21, icon:'🔍', lbl:'GdF chiede tutele', type:'stop',    eff:0,
+   title:'Guardia di Finanza chiede norme antifrode',
+   desc:'La GdF segnala al MEF rischi di abuso della misura. Nuovo tavolo tecnico convocato d\'urgenza sulle clausole antifrode.'},
+  {n:22, icon:'🌐', lbl:'Indagine UE',       type:'indietro',eff:-2,
+   title:'Bruxelles apre indagine sugli aiuti di Stato',
+   desc:'La Commissione Europea chiede chiarimenti sulla compatibilità della misura con le regole sugli aiuti di Stato. Il governo frena.'},
+  {n:23, icon:'🇪🇺', lbl:'Via libera UE',   type:'avanti',  eff:3,
+   title:'UE: nessun aiuto di Stato incompatibile!',
+   desc:'Bruxelles chiude l\'indagine con esito positivo. L\'ostacolo europeo è definitivamente rimosso. Grande respiro di sollievo!'},
+  {n:24, icon:'📝', lbl:'Bozza v.7',         type:'neutral', eff:0,
+   title:'Settima versione della bozza in circolazione',
+   desc:'Negli uffici del MEF circola la settima versione. Da 8 articoli si è arrivati a 34. Ognuno ha lasciato il proprio segno.'},
+  {n:25, icon:'🦢', lbl:'Oca!',              type:'oca',     eff:4,
+   title:'OCA! Consiglio dei Ministri approva in via preliminare',
+   desc:'Il CdM approva il decreto in via preliminare! Mancano solo la firma definitiva e la Gazzetta Ufficiale. Vola avanti!'},
+  {n:26, icon:'🖋️', lbl:'Firma MEF',         type:'avanti',  eff:2,
+   title:'Il Ministro del MEF firma il decreto',
+   desc:'La firma del MEF è apposta sul testo definitivo. Il decreto viene ora trasmesso al MIMIT per la controfirma.'},
+  {n:27, icon:'🔀', lbl:'Emendamento last min',type:'indietro',eff:-3,
+   title:'Emendamento last minute in Parlamento',
+   desc:'Un gruppo di maggioranza chiede di inserire i veicoli elettrici industriali tra i beni agevolati. Il decreto torna in Parlamento!'},
+  {n:28, icon:'🏛️', lbl:'CdM approva!',      type:'avanti',  eff:2,
+   title:'Consiglio dei Ministri approva definitivamente',
+   desc:'Il CdM approva il testo finale: solo beni materiali 4.0. Il decreto è pronto per la Gazzetta Ufficiale!'},
+  {n:29, icon:'📮', lbl:'Inviato alla GU',   type:'neutral', eff:0,
+   title:'Decreto trasmesso all\'Istituto Poligrafico',
+   desc:'Il testo definitivo è trasmesso all\'Istituto Poligrafico e Zecca dello Stato per la pubblicazione. Ci siamo quasi.'},
+  {n:30, icon:'🖥️', lbl:'Errore GU',         type:'stop',    eff:0,
+   title:'Sistema informatico della GU in crash',
+   desc:'Il sistema della Gazzetta Ufficiale registra un errore nel formato del file. Il decreto deve essere ritrasmesso. Incredibile.'},
+  {n:31, icon:'📄', lbl:'Webinar MIMIT 3',   type:'avanti',  eff:1,
+   title:'Terzo webinar MIMIT: "domani o dopodomani esce"',
+   desc:'Il funzionario che relaziona dichiara con grande fiducia: "domani o al massimo dopodomani". Con cauto ottimismo: avanza di 1.'},
+  {n:32, icon:'⚖️', lbl:'CdS: ok finale',    type:'avanti',  eff:1,
+   title:'Consiglio di Stato: parere definitivo favorevole',
+   desc:'Parere definitivo favorevole senza ulteriori osservazioni. Tutte le formalità legali sono finalmente assolte!'},
+  {n:33, icon:'📰', lbl:'Sole24: esce domani',type:'neutral', eff:0,
+   title:'Il Sole 24 Ore: "in Gazzetta domani mattina"',
+   desc:'"Pubblicazione imminente" titola il quotidiano. Le imprese rileggono l\'articolo cinque volte. Ancora nessuna certezza ufficiale.'},
+  {n:34, icon:'💣', lbl:'Refuso in stampa!', type:'indietro',eff:-2,
+   title:'Refuso tipografico blocca la pubblicazione',
+   desc:'L\'Istituto Poligrafico rileva un refuso nell\'articolo 7 comma 3: "bine strumentali" invece di "beni strumentali". Pubblicazione sospesa. Il testo torna agli uffici per correzione. Così vicini e ancora così lontani!'},
+  {n:35, icon:'⏰', lbl:'Ultima verifica',   type:'neutral', eff:0,
+   title:'Ultima verifica formale del Ragioniere Generale',
+   desc:'Il Ragioniere Generale effettua il controllo finale. Tutto è in ordine. Il decreto è in coda di stampa. Ancora un\'ora.'},
+  {n:36, icon:'🏆', lbl:'Decreto in GU!',    type:'end',     eff:0,
+   title:'Decreto Attuativo pubblicato in Gazzetta Ufficiale!',
+   desc:'Il decreto attuativo dell\'iperammortamento è ufficialmente pubblicato nella Gazzetta Ufficiale della Repubblica Italiana. Hai vinto!'}
+];
+
+/* ═══════════════════════════════════════
+   LAYOUT HELPERS
+═══════════════════════════════════════ */
+const COLS=7, ROWS=6;
+
+// Returns the (row,col) of cell n in the snake grid
+function cellRC(n){
+  const r=Math.floor(n/COLS);
+  const c=(r%2===0)?(n%COLS):(COLS-1-(n%COLS));
+  return {r,c};
+}
+
+// Returns the center (x,y) of cell n relative to the board-grid container
+function cellCenter(n){
+  const el=document.getElementById('c'+n);
+  if(!el) return null;
+  const grid=document.getElementById('grid');
+  const gb=grid.getBoundingClientRect();
+  const cb=el.getBoundingClientRect();
+  return {
+    x: cb.left - gb.left + cb.width/2,
+    y: cb.top  - gb.top  + cb.height/2,
+    w: cb.width, h: cb.height
+  };
+}
+
+/* ═══════════════════════════════════════
+   GAME STATE
+═══════════════════════════════════════ */
+const PAWNS=['🐦','🦜'];
+let numPlayers=1;
+let pos=[0,0];
+let skipTurns=[false,false];
+let moveCnt=[0,0];
+let curP=0;
+let rolling=false;
+let pendingEffect=null; // {p, fromPos, toPos, cell}
+
+/* ═══════════════════════════════════════
+   SCREEN MANAGEMENT
+═══════════════════════════════════════ */
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>{
+    s.classList.remove('active');
+    s.style.display='none';
+  });
+  const s=document.getElementById(id);
+  s.classList.add('active');
+  s.style.display=(id==='scr-start')?'flex':'block';
+}
+
+// Animate start screen in on load
+window.addEventListener('DOMContentLoaded',()=>{
+  gsap.to('.s-title',{opacity:1,y:0,scale:1,duration:.7,ease:'back.out(1.7)',delay:.1});
+  gsap.to('.s-sub',{opacity:1,duration:.6,delay:.35,ease:'power2.out'});
+  gsap.to('.mode-row',{opacity:1,duration:.6,delay:.55,ease:'power2.out'});
+  gsap.to('.deco-dice',{rotation:360,duration:6,repeat:-1,ease:'linear'});
+
+  // card hover GSAP
+  ['mc1','mc2'].forEach(id=>{
+    const el=document.getElementById(id);
+    el.addEventListener('mouseenter',()=>gsap.to(el,{y:-8,scale:1.05,duration:.25,ease:'power2.out'}));
+    el.addEventListener('mouseleave',()=>gsap.to(el,{y:0,scale:1,duration:.25,ease:'power2.out'}));
+  });
+});
+
+function startGame(n){
+  numPlayers=n;
+  pos=[0,0]; skipTurns=[false,false]; moveCnt=[0,0]; curP=0; rolling=false; pendingEffect=null;
+
+  const card1=document.getElementById('card1');
+  if(n===1){
+    card1.style.display='none';
+    document.getElementById('pg').style.gridTemplateColumns='1fr';
+  } else {
+    card1.style.display='';
+    document.getElementById('pg').style.gridTemplateColumns='1fr 1fr';
+  }
+
+  // Animate transition
+  gsap.to('#scr-start',{opacity:0,scale:.95,duration:.35,ease:'power2.in',onComplete:()=>{
+    showScreen('scr-game');
+    gsap.fromTo('#scr-game',{opacity:0,y:20},{opacity:1,y:0,duration:.45,ease:'power2.out'});
+    buildBoard();
+    updateSidebar();
+    updateTurnUI();
+  }});
+}
+
+function goHome(){
+  gsap.to('#scr-game',{opacity:0,y:-16,duration:.3,ease:'power2.in',onComplete:()=>{
+    showScreen('scr-start');
+    gsap.set('#scr-start',{opacity:0,scale:.95});
+    gsap.to('#scr-start',{opacity:1,scale:1,duration:.4,ease:'back.out(1.5)'});
+  }});
+}
+function resetGame(){
+  document.getElementById('win-ov').classList.remove('open');
+  startGame(numPlayers);
+}
+
+/* ═══════════════════════════════════════
+   BUILD BOARD
+═══════════════════════════════════════ */
+function buildBoard(){
+  const grid=document.getElementById('grid');
+  grid.innerHTML='';
+
+  // Build snake layout
+  const slots=[];
+  for(let r=0;r<ROWS;r++){
+    const row=[];
+    for(let c=0;c<COLS;c++) row.push(r*COLS+c);
+    if(r%2===1) row.reverse();
+    slots.push(row);
+  }
+
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      const n=slots[r][c];
+      if(n>36){
+        const e=document.createElement('div');
+        e.className='c-empty'; grid.appendChild(e); continue;
+      }
+      const cell=CELLS[n];
+      const div=document.createElement('div');
+      div.className='cell t-'+cell.type;
+      div.id='c'+n;
+      div.onclick=()=>peekCell(n);
+
+      // Direction arrow
+      let arrowChar='';
+      const rc=cellRC(n);
+      if(n<36){
+        const rcNext=cellRC(n+1);
+        if(rcNext.r===rc.r){
+          arrowChar=(rcNext.c>rc.c)?'→':'←';
+        } else {
+          arrowChar='↓';
+        }
+      }
+
+      div.innerHTML=
+        '<span class="c-num">'+n+'</span>'+
+        '<span class="c-icon">'+cell.icon+'</span>'+
+        '<span class="c-lbl">'+cell.lbl+'</span>'+
+        (arrowChar?'<span class="c-arrow">'+arrowChar+'</span>':'');
+      grid.appendChild(div);
+    }
+  }
+
+  // Place pawn elements
+  const layer=document.getElementById('pawns-layer');
+  layer.innerHTML='';
+  for(let p=0;p<2;p++){
+    const el=document.createElement('div');
+    el.className='pawn-el';
+    el.id='pawn'+p;
+    el.textContent=PAWNS[p];
+    if(p===1&&numPlayers===1) el.style.display='none';
+    layer.appendChild(el);
+  }
+
+  // Wait for layout then place pawns
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    for(let p=0;p<(numPlayers===1?1:2);p++) snapPawn(p,pos[p]);
+  }));
+}
+
+/* ═══════════════════════════════════════
+   PAWN POSITIONING
+═══════════════════════════════════════ */
+function snapPawn(p,n){
+  const cc=cellCenter(n);
+  if(!cc) return;
+  const el=document.getElementById('pawn'+p);
+  const layer=document.getElementById('pawns-layer');
+  const lb=layer.getBoundingClientRect();
+  const gb=document.getElementById('grid').getBoundingClientRect();
+  const offX=gb.left-lb.left;
+  const offY=gb.top-lb.top;
+
+  const ox=p===0?-7:7; // slight offset so both pawns don't overlap exactly
+  gsap.set(el,{
+    left: offX+cc.x+ox - el.offsetWidth/2,
+    top:  offY+cc.y - el.offsetHeight,
+  });
+}
+
+function animatePawn(p,fromN,toN,onDone){
+  const el=document.getElementById('pawn'+p);
+  const layer=document.getElementById('pawns-layer');
+  const lb=layer.getBoundingClientRect();
+  const gb=document.getElementById('grid').getBoundingClientRect();
+  const offX=gb.left-lb.left;
+  const offY=gb.top-lb.top;
+  const ox=p===0?-7:7;
+
+  // Build waypoints: step through each intermediate cell
+  const step=fromN<toN?1:-1;
+  const waypoints=[];
+  for(let n=fromN+step;n!==toN+step;n+=step){
+    if(n<0||n>36) break;
+    const cc=cellCenter(n);
+    if(cc) waypoints.push({
+      x: offX+cc.x+ox - parseFloat(gsap.getProperty(el,'width'))/2,
+      y: offY+cc.y   - parseFloat(gsap.getProperty(el,'height'))
+    });
+  }
+  if(waypoints.length===0){snapPawn(p,toN);if(onDone)onDone();return;}
+
+  // Bounce up on each step
+  const tl=gsap.timeline({onComplete:onDone});
+  waypoints.forEach((wp,i)=>{
+    const isLast=(i===waypoints.length-1);
+    tl.to(el,{
+      left:wp.x, y:wp.y,
+      duration: 0.22,
+      ease:'power1.inOut',
+    },'+=0');
+    // little hop
+    tl.to(el,{scaleY:0.8,scaleX:1.15,duration:0.06,ease:'power1.in'},'<');
+    tl.to(el,{scaleY:1,scaleX:1,duration:0.12,ease:'bounce.out'},'<0.06');
+  });
+  // Landing squash
+  tl.to(el,{scaleY:0.75,scaleX:1.2,duration:0.08,ease:'power2.in'});
+  tl.to(el,{scaleY:1,scaleX:1,duration:0.25,ease:'elastic.out(1.2,.5)'});
+}
+
+/* ═══════════════════════════════════════
+   CELL HIGHLIGHTS
+═══════════════════════════════════════ */
+function updateHighlights(){
+  document.querySelectorAll('.cell').forEach(c=>c.classList.remove('hi-p1','hi-p2','hi-both'));
+  const activePlayers=numPlayers===1?[0]:[0,1];
+  activePlayers.forEach(p=>{
+    const el=document.getElementById('c'+pos[p]);
+    if(!el) return;
+    if(numPlayers===2&&pos[0]===pos[1]){
+      el.classList.add('hi-both');
+    } else {
+      el.classList.add(p===0?'hi-p1':'hi-p2');
+    }
+  });
+}
+
+/* ═══════════════════════════════════════
+   SIDEBAR UPDATE
+═══════════════════════════════════════ */
+function updateSidebar(){
+  for(let p=0;p<2;p++){
+    document.getElementById('pp'+p).textContent=pos[p];
+    document.getElementById('pb'+p).style.width=Math.round(pos[p]/36*100)+'%';
+    const card=document.getElementById('card'+p);
+    card.classList.toggle('skip-fade',skipTurns[p]);
+    let badge=card.querySelector('.pc-skip');
+    if(skipTurns[p]){
+      if(!badge){badge=document.createElement('div');badge.className='pc-skip';badge.textContent='⏸ Salta turno';card.appendChild(badge);}
+    } else { if(badge) badge.remove(); }
+  }
+  updateHighlights();
+}
+
+function updateTurnUI(){
+  const names=['🐦 G1','🦜 G2'];
+  const colors=['#1d4ed8','#b91c1c'];
+  const banner=document.getElementById('turn-banner');
+
+  if(numPlayers===1){
+    banner.innerHTML='<span style="color:#7c3aed">🎲 Il tuo turno!</span>';
+  } else {
+    banner.innerHTML='Turno: <strong style="color:'+colors[curP]+'">'+names[curP]+'</strong>';
+  }
+  // highlight active card
+  [0,1].forEach(i=>{
+    const c=document.getElementById('card'+i);
+    c.classList.toggle('active',i===curP);
+  });
+
+  const btn=document.getElementById('roll-btn');
+  if(skipTurns[curP]){
+    btn.textContent='⏭ Salta il turno!';
+  } else if(numPlayers===1){
+    btn.textContent='🎲 Lancia!';
+  } else {
+    btn.textContent='🎲 Lancia — '+(curP===0?'G1 🐦':'G2 🦜')+'!';
+  }
+  btn.disabled=false;
+}
+
+function showCellInfo(n, pHint){
+  const cell=CELLS[n];
+  const bm={avanti:'eb-avanti',indietro:'eb-indietro',stop:'eb-stop',
+            neutral:'eb-neutro',oca:'eb-oca',start:'eb-start',end:'eb-end'};
+  const lm={avanti:'▲ Avanza',indietro:'▼ Torna indietro',stop:'⏸ Salta turno',
+            neutral:'— Neutro',oca:'🦢 Oca!',start:'🏁 Partenza',end:'🏆 Arrivo'};
+  document.getElementById('ev-icon').textContent=cell.icon;
+  document.getElementById('ev-badge-wrap').innerHTML='<span class="ev-badge '+bm[cell.type]+'">'+lm[cell.type]+'</span>';
+  document.getElementById('ev-title').textContent=cell.title;
+  document.getElementById('ev-desc').textContent=cell.desc;
+  const efEl=document.getElementById('ev-effect');
+  let ef='';
+  if(cell.eff>0) ef='🚀 Avanza di '+cell.eff+' caselle';
+  else if(cell.eff<0) ef='💀 Torna indietro di '+Math.abs(cell.eff)+' caselle';
+  else if(cell.type==='stop') ef='⏸ Salta il prossimo turno';
+  efEl.textContent=ef; efEl.style.display=ef?'inline-block':'none';
+  const ptag=document.getElementById('ev-ptag');
+  ptag.textContent=pHint===0?'🐦 Giocatore 1':pHint===1?'🦜 Giocatore 2':'';
+}
+
+/* ═══════════════════════════════════════
+   DICE ROLL — GSAP
+═══════════════════════════════════════ */
+function rollDice(){
+  if(rolling) return;
+  const p=curP;
+
+  if(skipTurns[p]){
+    skipTurns[p]=false;
+    updateSidebar();
+    showCellInfo(pos[p],p);
+    curP=numPlayers===1?0:1-p;
+    updateTurnUI();
+    return;
+  }
+
+  rolling=true;
+  document.getElementById('roll-btn').disabled=true;
+
+  const d0=document.getElementById('die0');
+  const d1=document.getElementById('die1');
+
+  // GSAP dice spin — rapid face cycling + 3D rotation
+  const tl=gsap.timeline();
+  let tick=0;
+  const totalTicks=18;
+
+  // Fast random face flips
+  const flashIv=setInterval(()=>{
+    d0.textContent=DF[Math.floor(Math.random()*6)];
+    d1.textContent=DF[Math.floor(Math.random()*6)];
+    tick++;
+    if(tick>=totalTicks){
+      clearInterval(flashIv);
+      // Final values
+      const v0=Math.floor(Math.random()*6)+1;
+      const v1=Math.floor(Math.random()*6)+1;
+      d0.textContent=DF[v0-1];
+      d1.textContent=DF[v1-1];
+      const total=v0+v1;
+      document.getElementById('dtotal').innerHTML=total+'<small>totale</small>';
+
+      // Landing bounce via GSAP
+      gsap.fromTo([d0,d1],
+        {scale:1.4,rotation:gsap.utils.random(-25,25,1)},
+        {scale:1,rotation:0,duration:.45,ease:'elastic.out(1,.5)',stagger:.06});
+
+      moveCnt[p]++;
+      rolling=false;
+      processMove(total);
+    }
+  }, 55);
+
+  // Spin the dice visually during flash
+  gsap.to([d0,d1],{
+    rotation:'+=720',
+    duration: totalTicks*0.055,
+    ease:'power1.in',
+    stagger:.04,
+  });
+}
+
+/* ═══════════════════════════════════════
+   PROCESS MOVE
+═══════════════════════════════════════ */
+function processMove(steps){
+  const p=curP;
+  let dest=pos[p]+steps;
+  if(dest>36) dest=36-(dest-36);
+  if(dest<0)  dest=0;
+
+  // Step 1: animate pawn to landing cell
+  animatePawn(p, pos[p], dest, ()=>{
+    pos[p]=dest;
+    updateSidebar();
+    showCellInfo(dest,p);
+
+    if(dest===36){
+      spawnConfetti();
+      setTimeout(()=>showWin(p),500);
+      return;
+    }
+
+    const cell=CELLS[dest];
+
+    if(cell.type==='stop'||cell.eff!==0){
+      // Show modal before applying effect
+      pendingEffect={p,dest,cell};
+      showEventModal(cell, p);
+    } else {
+      // No effect — pass turn
+      curP=numPlayers===1?0:1-p;
+      updateTurnUI();
+    }
+  });
+}
+
+/* ═══════════════════════════════════════
+   EVENT MODAL
+═══════════════════════════════════════ */
+function showEventModal(cell, p){
+  const bm={avanti:'eb-avanti',indietro:'eb-indietro',stop:'eb-stop',
+            neutral:'eb-neutro',oca:'eb-oca',start:'eb-start',end:'eb-end'};
+  const lm={avanti:'▲ Avanza',indietro:'▼ Torna indietro',stop:'⏸ Salta turno',
+            oca:'🦢 Oca!'};
+
+  document.getElementById('em-icon').textContent=cell.icon;
+  document.getElementById('em-badge-wrap').innerHTML=
+    '<span class="ev-badge '+bm[cell.type]+' em-badge">'+lm[cell.type]+'</span>';
+  document.getElementById('em-title').textContent=cell.title;
+  document.getElementById('em-desc').textContent=cell.desc;
+
+  const eff=document.getElementById('em-effect');
+  if(cell.type==='stop'){
+    eff.textContent='⏸ Salta il prossimo turno!';
+    eff.className='em-effect stp';
+  } else if(cell.type==='oca'){
+    eff.textContent='🦢 +'+(cell.eff)+' caselle!';
+    eff.className='em-effect oca';
+  } else if(cell.eff>0){
+    eff.textContent='🚀 +'+cell.eff+' caselle!';
+    eff.className='em-effect pos';
+  } else {
+    eff.textContent='💀 '+cell.eff+' caselle!';
+    eff.className='em-effect neg';
+  }
+
+  // Change OK button text based on effect
+  const okBtn=document.getElementById('em-ok-btn');
+  if(cell.type==='stop') okBtn.textContent='😤 Ok, aspetto…';
+  else if(cell.eff>0)    okBtn.textContent='🚀 Vai avanti!';
+  else                   okBtn.textContent='😭 Lo sapevo…';
+
+  const modal=document.getElementById('ev-modal');
+  modal.classList.add('open');
+
+  // Animate box in with GSAP
+  gsap.fromTo('#ev-modal-box',
+    {scale:.65,opacity:0,y:30,rotation:-4},
+    {scale:1,opacity:1,y:0,rotation:0,duration:.45,ease:'back.out(1.8)'}
+  );
+  // Animate effect text
+  gsap.fromTo('#em-effect',
+    {scale:.5,opacity:0},
+    {scale:1,opacity:1,duration:.4,delay:.2,ease:'elastic.out(1,.6)'}
+  );
+}
+
+function confirmEvent(){
+  const {p,dest,cell}=pendingEffect;
+  pendingEffect=null;
+
+  // Animate modal out
+  gsap.to('#ev-modal-box',{scale:.7,opacity:0,y:-20,duration:.3,ease:'back.in(1.5)',
+    onComplete:()=>{
+      document.getElementById('ev-modal').classList.remove('open');
+
+      if(cell.type==='stop'){
+        skipTurns[p]=true;
+        updateSidebar();
+        curP=numPlayers===1?0:1-p;
+        updateTurnUI();
+        return;
+      }
+
+      // Apply bonus/malus
+      let finalPos=dest+cell.eff;
+      if(finalPos<0)  finalPos=0;
+      if(finalPos>36) finalPos=36;
+
+      animatePawn(p,dest,finalPos,()=>{
+        pos[p]=finalPos;
+        updateSidebar();
+        showCellInfo(finalPos,p);
+        if(finalPos===36){
+          spawnConfetti();
+          setTimeout(()=>showWin(p),500);
+        } else {
+          curP=numPlayers===1?0:1-p;
+          updateTurnUI();
+        }
+      });
+    }
+  });
+}
+
+/* quick peek at cell info without game logic */
+function peekCell(n){
+  showCellInfo(n,-1);
+}
+
+/* ═══════════════════════════════════════
+   WIN
+═══════════════════════════════════════ */
+function showWin(p){
+  const nm=['Giocatore 1 🐦','Giocatore 2 🦜'];
+  if(numPlayers===1){
+    document.getElementById('win-title').textContent='Ce l\'hai fatta! 🎉';
+    document.getElementById('win-desc').textContent='Hai portato il decreto attuativo in Gazzetta Ufficiale! Le imprese italiane ti ringraziano.';
+    document.getElementById('win-sub').textContent='Completato in '+moveCnt[0]+' lanci!';
+  } else {
+    document.getElementById('win-title').textContent=nm[p]+' vince!';
+    document.getElementById('win-desc').textContent=nm[p]+' ha pubblicato il decreto prima dell\'avversario!';
+    document.getElementById('win-sub').textContent='Completato in '+moveCnt[p]+' lanci · Avversario alla casella '+pos[1-p];
+  }
+  const ov=document.getElementById('win-ov');
+  ov.classList.add('open');
+  gsap.fromTo('#win-box',
+    {scale:.5,rotation:-6,opacity:0},
+    {scale:1,rotation:0,opacity:1,duration:.55,ease:'back.out(1.6)'}
+  );
+}
+
+/* ═══════════════════════════════════════
+   CONFETTI — GSAP
+═══════════════════════════════════════ */
+function spawnConfetti(){
+  const colors=['#f59e0b','#22c55e','#3b82f6','#ef4444','#a855f7','#ec4899','#fbbf24'];
+  for(let i=0;i<80;i++){
+    const el=document.createElement('div');
+    el.className='cft';
+    const size=6+Math.random()*9;
+    el.style.cssText=
+      'width:'+size+'px;height:'+size+'px;'+
+      'left:'+Math.random()*100+'vw;'+
+      'background:'+colors[Math.floor(Math.random()*colors.length)]+';'+
+      'border-radius:'+(Math.random()>.5?'50%':'3px')+';';
+    document.body.appendChild(el);
+    gsap.fromTo(el,
+      {y:-20,x:0,rotation:0,opacity:1},
+      {
+        y:window.innerHeight+40,
+        x:(Math.random()-.5)*300,
+        rotation:Math.random()*720,
+        opacity:0,
+        duration:2.5+Math.random()*2,
+        delay:Math.random()*.8,
+        ease:'power1.in',
+        onComplete:()=>el.remove()
+      }
+    );
+  }
+}
+</script>
+</body>
+</html>
